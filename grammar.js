@@ -1,83 +1,65 @@
-/**
- * @file Tree sitter for Cypher
- * @author Hari Bantwal <hpai.bantwal@gmail.com>
- * @license MIT
- */
-
 const NEWLINE = /\r?\n/;
 
 module.exports = grammar({
-  name: 'cypher',
+  name: "cypher",
+
+  extras: ($) => [$.comment, /\s/],
 
   rules: {
-    // Entry point
-    query: $ => repeat($.match_clause),
+    source_file: ($) => repeat(choice($.comment, $.variable)),
 
-    // Define MATCH clause
-    match_clause: $ => seq(
-      'MATCH',
-      field('pattern', $.pattern),
-      optional($.where_clause),
-      optional($.return_clause)
-    ),
+    comment: ($) => token(seq("#", /.*/)),
 
-    // Define WHERE clause
-    where_clause: $ => seq(
-      'WHERE',
-      field('condition', $.expression)
-    ),
+    variable: ($) =>
+      seq(field("name", $.identifier), "=", optional(field("value", $.value))),
 
-    // Define RETURN clause
-    return_clause: $ => seq(
-      'RETURN',
-      field('return_items', $.return_items)
-    ),
+    interpolated_variable: ($) =>
+      choice(
+        seq("$", $.identifier),
+        seq("${", $.identifier, "}"),
+        seq("${", $.identifier, ":-", $.identifier, "}"),
+        seq("$(", $.shell_command, ")"),
+      ),
 
-    // Define Patterns (Nodes and Relationships)
-    pattern: $ => seq(
-      $.node,
-      repeat(seq($.relationship, $.node))
-    ),
+    shell_command: ($) => /[^$()]+/,
 
-    node: $ => seq(
-      '(', 
-      optional($.variable),
-      optional(seq(':', $.label)),
-      ')'
-    ),
+    identifier: ($) => /[A-Z_][0-9a-zA-Z_]*/,
 
-    relationship: $ => seq(
-      '-[',
-      optional($.relationship_type),
-      ']->'
-    ),
+    value: ($) =>
+      choice(
+        $.string_interpolated,
+        $.string_literal,
+        $.url,
+        $.bool,
+        $.integer,
+        $.raw_value,
+      ),
 
-    // Expressions for properties and conditions
-    expression: $ => choice(
-      $.identifier,
-      $.comparison
-    ),
+    bool: ($) => choice("true", "false"),
 
-    // Define comparison expressions (e.g., n.name = 'Alice')
-    comparison: $ => seq(
-      $.identifier,
-      '=',
-      $.string
-    ),
+    integer: ($) => /\d+/,
 
-    // Return items (for RETURN clause)
-    return_items: $ => sep1(',', $.identifier),
+    string_interpolated: ($) =>
+      seq('"', repeat(choice($._interpolated_content, $.escape_sequence)), '"'),
 
-    // Tokens
-    identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
-    variable: $ => /[a-z][a-zA-Z0-9_]*/,
-    label: $ => /[A-Z][a-zA-Z0-9_]*/,
-    relationship_type: $ => /[A-Z_][A-Z0-9_]*/,
-    string: $ => /'([^'\\]|\\.)*'/,
-  }
+    _interpolated_content: ($) => choice(/[^"$\\]+/, $.interpolated_variable),
+
+    string_literal: ($) =>
+      seq("'", repeat(choice(/[^'\\]+/, $.escape_sequence)), "'"),
+
+    escape_sequence: ($) => token(seq("\\", /[nrtfb"'\$\\]/)),
+
+    url: ($) =>
+      token(
+        seq(
+          /https?:\/\//,
+          /[a-zA-Z0-9.-]+/,
+          optional(seq(":", /\d+/)),
+          optional(seq("/", /[^\s#]*/)),
+          optional(seq("#", /[^\s]*/)),
+        ),
+      ),
+
+    raw_value: ($) => token(prec(-1, /[^#=\n]+/)),
+  },
 });
-
-// Utility function to parse comma-separated items
-function sep1(sep, rule) {
-  return seq(rule, repeat(seq(sep, rule)));
-}
