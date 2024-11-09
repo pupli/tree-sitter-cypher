@@ -1,7 +1,7 @@
 {
   "name": "tree-sitter-cypher",
   "version": "0.1.0",
-  "description": "Tree sitter for Cypher",
+  "description": "Cypher grammar for tree-sitter",
   "repository": "github:tree-sitter/tree-sitter-cypher",
   "license": "MIT",
   "author": {

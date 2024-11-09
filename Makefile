@@ -3,7 +3,7 @@ $(error Windows is not supported)
 endif
 
 LANGUAGE_NAME := tree-sitter-cypher
-HOMEPAGE_URL := https://github.com/pupli/tree-sitter-cypher
+HOMEPAGE_URL := https://github.com/tree-sitter/tree-sitter-cypher
 VERSION := 0.1.0
 
 # repository

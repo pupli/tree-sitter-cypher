@@ -1,4 +1,4 @@
-module github.com/pupli/tree-sitter-cypher
+module github.com/tree-sitter/tree-sitter-cypher
 
 go 1.22
 
