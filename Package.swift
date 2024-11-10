@@ -16,7 +16,6 @@ let package = Package(
             path: ".",
             sources: [
                 "src/parser.c",
-                "src/scanner.c"
                 // NOTE: if your language has an external scanner, add it here.
             ],
             resources: [

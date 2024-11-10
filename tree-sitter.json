@@ -21,7 +21,7 @@
       }
     ],
     "links": {
-      "repository": "https://github.com/tree-sitter/tree-sitter-cypher"
+      "repository": "https://github.com/pupli/tree-sitter-cypher"
     }
   },
   "bindings": {

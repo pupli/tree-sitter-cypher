@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.13)
 project(tree-sitter-cypher
         VERSION "0.1.0"
         DESCRIPTION "Cypher grammar for tree-sitter"
-        HOMEPAGE_URL "https://github.com/tree-sitter/tree-sitter-cypher"
+        HOMEPAGE_URL "https://github.com/pupli/tree-sitter-cypher"
         LANGUAGES C)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)

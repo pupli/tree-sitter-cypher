@@ -408,31 +408,31 @@ static bool scanner_scan(struct Scanner *self, TSLexer *lexer, const bool *valid
     return false;
 }
 
-void *tree_sitter_curry_external_scanner_create() {
+void *tree_sitter_cypher_external_scanner_create() {
     struct Scanner *scanner = ts_malloc(sizeof(struct Scanner));
     scanner_init(scanner);
     return scanner;
 }
 
-bool tree_sitter_curry_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
+bool tree_sitter_cypher_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     struct Scanner *scanner = (struct Scanner *)(payload);
 
     return scanner_scan(scanner, lexer, valid_symbols);
 }
 
-unsigned tree_sitter_curry_external_scanner_serialize(void *payload, char *buffer) {
+unsigned tree_sitter_cypher_external_scanner_serialize(void *payload, char *buffer) {
     struct Scanner *scanner = (struct Scanner *)(payload);
 
     return scanner_serialize(scanner, buffer);
 }
 
-void tree_sitter_curry_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+void tree_sitter_cypher_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     struct Scanner *scanner = (struct Scanner *)(payload);
 
     scanner_deserialize(scanner, buffer, length);
 }
 
-void tree_sitter_curry_external_scanner_destroy(void *payload) {
+void tree_sitter_cypher_external_scanner_destroy(void *payload) {
     struct Scanner *scanner = (struct Scanner *)(payload);
 
     scanner_deinit(scanner);

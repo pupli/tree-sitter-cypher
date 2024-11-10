@@ -2,7 +2,7 @@
   "name": "tree-sitter-cypher",
   "version": "0.1.0",
   "description": "Cypher grammar for tree-sitter",
-  "repository": "https://github.com/tree-sitter/tree-sitter-cypher",
+  "repository": "https://github.com/pupli/tree-sitter-cypher",
   "license": "MIT",
   "author": {
     "name": "Hari Bantwal",
