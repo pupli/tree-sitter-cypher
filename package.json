@@ -5,8 +5,7 @@
   "repository": "github:tree-sitter/tree-sitter-cypher",
   "license": "MIT",
   "author": {
-    "name": "Hari Bantwal",
-    "email": "hpai.bantwal@gmail.com"
+    "name": "Hari"
   },
   "main": "bindings/node",
   "types": "bindings/node",

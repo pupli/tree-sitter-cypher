@@ -14,7 +14,7 @@ classifiers = [
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
-authors = [{ name = "Hari Bantwal", email = "hpai.bantwal@gmail.com" }]
+authors = [{ name = "Hari" }]
 requires-python = ">=3.9"
 license.text = "MIT"
 readme = "README.md"

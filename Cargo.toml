@@ -2,7 +2,7 @@
 name = "tree-sitter-cypher"
 description = "Cypher grammar for tree-sitter"
 version = "0.1.0"
-authors = ["Hari Bantwal <hpai.bantwal@gmail.com>"]
+authors = ["Hari"]
 license = "MIT"
 readme = "README.md"
 keywords = ["incremental", "parsing", "tree-sitter", "cypher"]

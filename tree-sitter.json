@@ -15,8 +15,7 @@
     "description": "Cypher grammar for tree-sitter",
     "authors": [
       {
-        "name": "Hari Bantwal",
-        "email": "hpai.bantwal@gmail.com"
+        "name": "Hari"
       }
     ],
     "links": {
