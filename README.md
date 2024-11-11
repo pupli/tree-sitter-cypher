@@ -53,8 +53,6 @@ tree-sitter init
 
 ### Step 5: Updating grammar.js with Cypher Grammar
 
-## Step 6 Updating `grammar.js` with Cypher Grammar
-
 The grammar for Cypher can be derived from openCypher’s official resources:
 
 - Refer to the [openCypher grammar](https://github.com/opencypher/openCypher/tree/master/tools/grammar) for details on Cypher syntax.
@@ -75,23 +73,23 @@ module.exports = grammar({
 });
 ```
 
-## Step 7: Running Tree-sitter Commands
+### Step 6: Running Tree-sitter Commands
 
 Once `grammar.js` is updated, you can use the following commands to generate, build, and test your parser.
 
-### Generate the Parser
+#### Generate the Parser
 
 ```bash
 tree-sitter generate
 ```
 
-### Build the Parser
+#### Build the Parser
 
 ```bash
 tree-sitter build
 ```
 
-## Step 8: Push to GitHub
+### Step 7: Push to GitHub
 
 
 
