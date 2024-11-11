@@ -1,4 +1,4 @@
-# tree-sitter-cypher
+# Tree Sitter Cypher
 
 A Tree-sitter parser for the Cypher query language, based on the [Cypher Style Guide](https://opencypher.org/resources) and the [openCypher grammar](https://github.com/opencypher/openCypher/tree/master/tools/grammar). This parser is designed for syntax highlighting and editor support, such as integration with a Zed extension.
 
