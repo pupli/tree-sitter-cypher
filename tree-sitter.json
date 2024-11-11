@@ -5,7 +5,9 @@
       "camelcase": "Cypher",
       "scope": "source.cypher",
       "file-types": [
-        ".cypher"
+        ".cypher",
+        ".cql",
+        ".cyp"
       ],
       "injection-regex": "^cypher$"
     }
