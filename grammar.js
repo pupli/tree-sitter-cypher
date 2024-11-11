@@ -1,961 +1,143 @@
-/// <reference types="tree-sitter-cli/dsl" />
-// @ts-check
-
-const PREC = {
-  PRAGMA: 1
-};
-
 module.exports = grammar({
   name: 'cypher',
-
-  extras: $ => [
-    $.pragma,
-    $.cpp_directive,
-    $.comment,
-    /\s/
+  extras: ($) => [$.comment, $._whitespace_char],
+  conflicts: () => [],
+  inline: ($) => [
+      $.namespace,
+      $.variable_in_parens,
   ],
-
-  externals: $ => [
-    $._layout_semicolon,
-    $._layout_open_brace,
-    $._layout_close_brace,
-    '->',
-    $._qualified_module_dot,
-    $._initialize_layout
-  ],
-
-  word: $ => $._identifier,
-
-  conflicts: $ => [
-    [$.qualified_module_identifier, $._qualified_module_identifier],
-    [$.qualified_module_identifier],
-    [$.function_identifier, $.variable_identifier],
-    [$._qualified_function_identifier, $._function],
-    [$._qualified_function_identifier, $._fun_op],
-    [$.type_identifier, $.data_constructor_identifier],
-    [$.type_identifier, $.class_identifier],
-    [$._qualified_class_identifier, $.class_declaration],
-    [$._function, $._variable],
-    [$._qualified_function, $._qualified_data_constructor],
-    [$._qualified_infix_operator, $._function, $._variable],
-    [$._qualified_infix_operator, $._variable],
-    [$._qualified_infix_operator, $._fun_op],
-    [$._qual_fun_op, $._qual_con_op],
-    [$.import_declaration],
-    [$.simple_type],
-    [$.data_constructor],
-    [$.simple_pattern, $.basic_expression],
-    [$.constructor_pattern],
-    [$.constructor_pattern, $.simple_pattern],
-    [$.constructor_pattern, $.basic_expression],
-    [$.constructor_pattern, $.simple_pattern, $.basic_expression],
-    [$.negative_pattern, $._literal],
-    [$.functional_pattern, $.basic_expression],
-    [$.field_pattern, $.general_data_constructor],
-    [$.infix_expression, $.infix_operator_expression],
-    [$.no_operator_expression, $.function_expression]
-  ],
-
   rules: {
-    module: $ => choice(
-      seq(
-        'module',
-        $._qualified_module_identifier,
-        optional($.exports),
-        'where',
-        $._top_declarations
-      ),
-      seq(
-        $._initialize_layout,
-        repeat(seq($._top_declaration, choice($.terminal, $._layout_semicolon)))
-      )
-    ),
-
-    _identifier: $ => /[a-z](\w|')*/,
-    _capitalized_identifier: $ => /[A-Z](\w|')*/,
-    _operator: $ => token(choice(
-      /\.\.[~!@#$%^&*+\-=<>?./|\\:]+/,                      // Prevents matching `..`.
-      /\.[~!@#$%^&*+\-=<>?/|\\:][~!@#$%^&*+\-=<>?./|\\:]*/, // Prevents matching `..`.
-      /\./,                                                 // Matches the composition operator `.`.
-      /:[~!@#$%^&*+\-=<>?./|\\][~!@#$%^&*+\-=<>?./|\\:]*/,  // Prevents matching `:`.
-      /::[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `::`.
-      /=[~!@#$%^&*+\-=<?./|\\:][~!@#$%^&*+\-=<>?./|\\:]*/,  // Prevents matching `=`.
-      /=>[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `=>`.
-      /\\[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `\`.
-      /\|[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `|`.
-      /<-[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `<-`.
-      /<[~!@#$%^&*+=<>?./|\\:][~!@#$%^&*+\-=<>?./|\\:]*/,   // Prevents matching `<-`.
-      /</,                                                  // Matches the lower than operator `<`.
-      /->[~!@#$%^&*+\-=<>?./|\\:]+/,                        // Prevents matching `->`.
-      /-[~!@#$%^&*+\-=<?./|\\:][~!@#$%^&*+\-=<>?./|\\:]*/,  // Prevents matching `->`.
-      /-/,                                                  // Matches the minus operator `-`.
-      /@[~!@#$%^&*+\-=<>?./|\\:]+/,                         // Prevents matching `@`.
-      /~[~!@#$%^&*+\-=<>?./|\\:]+/,                         // Prevents matching `~`.
-      /[!#$%^&*+>?/\\]+[~!@#$%^&*+\-=<>?./|\\:]*/           // Matches every other operator.
-    )),
-
-    module_identifier: $ => $._capitalized_identifier,
-    qualified_module_identifier: $ => seq(
-      repeat1(seq($.module_identifier, $._qualified_module_dot)),
-      $.module_identifier
-    ),
-    _qualified_module_identifier: $ => choice(
-      $.qualified_module_identifier,
-      $.module_identifier
-    ),
-
-    variable_identifier: $ => $._identifier,
-    qualified_variable_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.variable_identifier
-    ),
-    _qualified_variable_identifier: $ => choice(
-      $.qualified_variable_identifier,
-      $.variable_identifier
-    ),
-
-    function_identifier: $ => $._identifier,
-    qualified_function_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.function_identifier
-    ),
-    _qualified_function_identifier: $ => choice(
-      $.qualified_function_identifier,
-      $.function_identifier
-    ),
-
-    label_identifier: $ => $._identifier,
-    qualified_label_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.label_identifier
-    ),
-    _qualified_label_identifier: $ => choice(
-      $.qualified_label_identifier,
-      $.label_identifier
-    ),
-
-    infix_operator: $ => $._operator,
-    qualified_infix_operator: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.infix_operator
-    ),
-    _qualified_infix_operator: $ => choice(
-      $.qualified_infix_operator,
-      $.infix_operator
-    ),
-
-    type_identifier: $ => $._capitalized_identifier,
-    qualified_type_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.type_identifier
-    ),
-    _qualified_type_identifier: $ => choice(
-      $.qualified_type_identifier,
-      $.type_identifier
-    ),
-
-    class_identifier: $ => $._capitalized_identifier,
-    qualified_class_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.class_identifier
-    ),
-    _qualified_class_identifier: $ => choice(
-      $.qualified_class_identifier,
-      $.class_identifier
-    ),
-
-    data_constructor_identifier: $ => $._capitalized_identifier,
-    qualified_data_constructor_identifier: $ => seq(
-      $._qualified_module_identifier,
-      $._qualified_module_dot,
-      $.data_constructor_identifier
-    ),
-    _qualified_data_constructor_identifier: $ => choice(
-      $.qualified_data_constructor_identifier,
-      $.data_constructor_identifier
-    ),
-
-    _variable: $ => choice(
-      $.variable_identifier,
-      parens($.infix_operator)
-    ),
-
-    _function: $ => choice(
-      $.function_identifier,
-      parens($.infix_operator)
-    ),
-
-    _qualified_function: $ => choice(
-      $._qualified_function_identifier,
-      parens($._qualified_infix_operator)
-    ),
-
-    _label: $ => choice(
-      $.label_identifier,
-      parens($.infix_operator)
-    ),
-
-    _qualified_label: $ => choice(
-      $._qualified_label_identifier,
-      parens($._qualified_infix_operator)
-    ),
-
-    _data_constructor: $ => choice(
-      $.data_constructor_identifier,
-      parens($.infix_operator)
-    ),
-
-    _qualified_data_constructor: $ => choice(
-      $._qualified_data_constructor_identifier,
-      parens(choice(
-        alias(':', $.infix_operator),
-        $._qualified_infix_operator
-      ))
-    ),
-
-    _op: $ => choice(
-      $.infix_operator,
-      backticks(choice(
-        $.function_identifier,
-        $.data_constructor_identifier
-      ))
-    ),
-
-    _qual_op: $ => choice(
-      alias(':', $.infix_operator),
-      $._qualified_infix_operator,
-      backticks(choice(
-        $._qualified_function_identifier,
-        $._qualified_data_constructor_identifier
-      ))
-    ),
-
-    _fun_op: $ => choice(
-      $.infix_operator,
-      backticks($.function_identifier)
-    ),
-
-    _qual_fun_op: $ => choice(
-      $._qualified_infix_operator,
-      backticks($._qualified_function_identifier)
-    ),
-
-    _con_op: $ => choice(
-      $.infix_operator,
-      backticks($.data_constructor_identifier)
-    ),
-
-    _qual_con_op: $ => choice(
-      alias(':', $.infix_operator),
-      $._qualified_infix_operator,
-      backticks($._qualified_data_constructor_identifier)
-    ),
-
-    type_variable_identifier: $ => $._identifier,
-    _type_variable: $ => choice(
-      $.type_variable_identifier,
-      alias($.wildcard, $.anonymous_type_variable)
-    ),
-
-    terminal: $ => ';',
-
-    wildcard: $ => '_',
-
-    comment: $ => token(choice(
-      seq('--', /.*/),
-      seq(
-        '{-',
-        repeat(choice(/[^-]/, /-[^}]/)),
-        '-}'
-      )
-    )),
-
-    cpp_directive: $ => token(seq('#', /.*/)),
-
-    pragma: $ => token(prec(PREC.PRAGMA, seq(
-      '{-#',
-      repeat(choice(/[^#]/, /#[^-]/, /#-[^}]/)),
-      '#-}'
-    ))),
-
-    int: $ => token(choice(
-      /0(b|B)[0-1]+/,
-      /0(o|O)[0-7]+/,
-      /0(x|X)[0-9A-Fa-f]+/,
-      /\d+/
-    )),
-
-    float: $ => token(choice(
-      /\d+\.\d+((e|E)(\+|-)?\d+)?/,
-      /\d+(e|E)(\+|-)?\d+/
-    )),
-
-    char: $ => /'(\\(NUL|SOH|STX|ETX|EOT|ENQ|ACK|BEL|BS|HT|LF|VT|FF|CR|SO|SI|DLE|DC1|DC2|DC3|DC4|NAK|SYN|ETB|CAN|EM|SUB|ESC|FS|GS|RS|US|SP|DEL|[abfnrtv"'\\]|\d+|o[0-7]+|x[0-9A-Fa-f]+|\^[@-_])|[ -[\]-~])'/,
-
-    string: $ => token(seq(
-      '"',
-      repeat(choice(
-        /[^\\"\n]/,
-        /\\(\^)?(.|\n)/
-      )),
-      '"'
-    )),
-
-    _literal: $ => choice(
-      $.int,
-      $.float,
-      $.char,
-      $.string
-    ),
-
-    exports: $ => parens(optional(sep1(',', $.export))),
-
-    export: $ => choice(
-      $.module_export,
-      $._qualified_function,
-      seq(
-        $._qualified_type_identifier,
-        optional(choice(
-          $.all_constructors,
-          parens(optional(sep1(',', choice(
-            $._function,
-            $.data_constructor_identifier
-          ))))
-        ))
-      )
-    ),
-
-    module_export: $ => seq(
-      'module',
-      $._qualified_module_identifier
-    ),
-
-    all_constructors: $ => '(..)',
-
-    _top_declarations: $ => choice(
-      braces(repeat(seq($._top_declaration, optional($.terminal)))),
-      seq(
-        $._layout_open_brace,
-        repeat(seq($._top_declaration, choice($.terminal, $._layout_semicolon))),
-        $._layout_close_brace
-      )
-    ),
-
-    _top_declaration: $ => choice(
-      $.import_declaration,
-      $.fixity_declaration,
-      $.default_declaration,
-      $.datatype_declaration,
-      $.newtype_declaration,
-      $.type_synonym_declaration,
-      $.class_declaration,
-      $.instance_declaration,
-      $._declaration
-    ),
-
-    import_declaration: $ => seq(
-      'import',
-      optional('qualified'),
-      $._qualified_module_identifier,
-      optional($.import_alias),
-      optional(choice(
-        $.import_spec,
-        $.hiding_import_spec
-      ))
-    ),
-
-    import_alias: $ => seq(
-      'as',
-      $._qualified_module_identifier
-    ),
-
-    import_spec: $ => parens(optional(sep1(',', $.import))),
-
-    hiding_import_spec: $ => seq(
-      'hiding',
-      parens(optional(sep1(',', $.import)))
-    ),
-
-    import: $ => choice(
-      $._function,
-      seq(
-        $.type_identifier,
-        optional(choice(
-          $.all_constructors,
-          parens(optional(sep1(',', choice(
-            $._function,
-            $.data_constructor_identifier
-          ))))
-        ))
-      )
-    ),
-
-    fixity_declaration: $ => seq(
-      choice('infixl', 'infixr', 'infix'),
-      optional($.int),
-      sep1(',', $._op)
-    ),
-
-    default_declaration: $ => seq(
-      'default',
-      parens(optional(sep1(',', $.type_expression)))
-    ),
-
-    type_expression: $ => seq(
-      repeat($.forall_vars),
-      optional($.context),
-      $.func_type_expression
-    ),
-
-    forall_vars: $ => seq(
-      'forall',
-      repeat1($.type_variable_identifier),
-      '.'
-    ),
-
-    context: $ => seq(
-      choice(
-        $.constraint,
-        parens(optional(sep1(',', $.constraint)))
-      ),
-      '=>'
-    ),
-
-    constraint: $ => seq(
-      $._qualified_class_identifier,
-      choice(
-        $.type_variable_identifier,
-        parens(seq(
-          $.type_variable_identifier,
-          $.app_type_expression
-        ))
-      )
-    ),
-
-    func_type_expression: $ => prec.right(seq(
-      $.app_type_expression,
-      optional(seq(
-        '->',
-        $.type_expression
-      ))
-    )),
-
-    app_type_expression: $ => prec.left(repeat1($.simple_type_expression)),
-
-    simple_type_expression: $ => choice(
-      $._type_variable,
-      $.type_constructor,
-      $.tuple_type,
-      $.list_type,
-      $.paren_type
-    ),
-
-    tuple_type: $ => parens(sep2(',', $.type_expression)),
-
-    list_type: $ => brackets($.type_expression),
-
-    paren_type: $ => parens($.type_expression),
-
-    type_constructor: $ => choice(
-      '()',
-      '[]',
-      '(->)',
-      $.tuple_constructor,
-      $._qualified_type_identifier
-    ),
-
-    tuple_constructor: $ => /\(,+\)/,
-
-    simple_type: $ => seq(
-      $.type_identifier,
-      repeat($._type_variable)
-    ),
-
-    type_annotation: $ => seq(
-      '::',
-      $.type_expression
-    ),
-
-    newtype_declaration: $ => seq(
-      'newtype',
-      $.simple_type,
-      '=',
-      $.newtype_constructor,
-      optional($.deriving)
-    ),
-
-    datatype_declaration: $ => choice(
-      seq(
-        'external',
-        'data',
-        $.simple_type
-      ),
-      seq(
-        'data',
-        $.simple_type,
-        optional(seq('=', $.constructor_declarations)),
-        optional($.deriving)
-      )
-    ),
-
-    constructor_declarations: $ => sep1(
-      '|',
-      choice(
-        $.data_constructor,
-        $.infix_data_constructor,
-        $.record_data_constructor
-      )
-    ),
-
-    data_constructor: $ => seq(
-      $.data_constructor_identifier,
-      repeat($.simple_type_expression)
-    ),
-
-    infix_data_constructor: $ => seq(
-      $.app_type_expression,
-      $._con_op,
-      $.app_type_expression
-    ),
-
-    record_data_constructor: $ => seq(
-      $.data_constructor_identifier,
-      $._fields
-    ),
-
-    _fields: $ => braces(sep1(',', $.field)),
-
-    field: $ => seq(
-      sep1(',', $._label),
-      $.type_annotation
-    ),
-
-    newtype_constructor: $ => seq(
-      $.data_constructor_identifier,
-      choice(
-        $.simple_type_expression,
-        braces($.newtype_field)
-      )
-    ),
-
-    newtype_field: $ => seq(
-      $._label,
-      $.type_annotation
-    ),
-
-    deriving: $ => seq(
-      'deriving',
-      parens(optional(sep1(',', $._qualified_class_identifier)))
-    ),
-
-    class_declaration: $ => seq(
-      'class',
-      optional($.simple_context),
-      $.class_identifier,
-      $.type_variable_identifier,
-      $._where
-    ),
-
-    instance_declaration: $ => seq(
-      'instance',
-      optional($.simple_context),
-      $._qualified_class_identifier,
-      $.instance_type,
-      $._where
-    ),
-
-    instance_type: $ => choice(
-      $.type_constructor,
-      $.paren_instance_type,
-      $.tuple_instance_type,
-      $.list_instance_type,
-      $.func_instance_type
-    ),
-
-    tuple_instance_type: $ => parens(sep2(',', $.type_variable_identifier)),
-
-    list_instance_type: $ => brackets($.type_variable_identifier),
-
-    paren_instance_type: $ => parens(seq(
-      $.type_constructor,
-      repeat($.type_variable_identifier)
-    )),
-
-    func_instance_type: $ => parens(seq(
-      $.type_variable_identifier,
-      '->',
-      $.type_variable_identifier
-    )),
-
-    simple_context: $ => seq(
-      choice(
-        $.simple_constraint,
-        parens(optional(sep1(',', $.simple_constraint)))
-      ),
-      '=>'
-    ),
-
-    simple_constraint: $ => seq(
-      $._qualified_class_identifier,
-      $.type_variable_identifier
-    ),
-
-    _where: $ => seq(
-      'where',
-      $._declarations
-    ),
-
-    type_synonym_declaration: $ => seq(
-      'type',
-      $.simple_type,
-      '=',
-      $.type_expression
-    ),
-
-    _declarations: $ => choice(
-      braces(repeat(seq($._declaration, optional($.terminal)))),
-      seq(
-        $._layout_open_brace,
-        repeat(seq($._declaration, choice($.terminal, $._layout_semicolon))),
-        $._layout_close_brace
-      )
-    ),
-
-    _declaration: $ => choice(
-      $.signature,
-      $.external_declaration,
-      $.equation
-    ),
-
-    _functions: $ => sep1(',', $._function),
-
-    signature: $ => seq(
-      $._functions,
-      $.type_annotation
-    ),
-
-    external_declaration: $ => seq(
-      $._functions,
-      'external'
-    ),
-
-    equation: $ => seq(
-      $.function_lhs,
-      $.function_rhs
-    ),
-
-    function_lhs: $ => choice(
-      seq($._function, repeat($.simple_pattern)),
-      seq($.constructor_pattern, $._fun_op, $.constructor_pattern),
-      seq(parens($.function_lhs), repeat1($.simple_pattern))
-    ),
-
-    function_rhs: $ => choice(
-      seq('=', $.expression, optional($._local_where)),
-      seq($._guards, optional($._local_where))
-    ),
-
-    _guards: $ => repeat1($.guard),
-
-    guard: $ => seq(
-      '|',
-      $.infix_expression,
-      '=',
-      $.expression
-    ),
-
-    _local_where: $ => seq(
-      'where',
-      $._local_declarations
-    ),
-
-    _local_declarations: $ => choice(
-      braces(repeat(seq($._local_declaration, optional($.terminal)))),
-      seq(
-        $._layout_open_brace,
-        repeat(seq($._local_declaration, choice($.terminal, $._layout_semicolon))),
-        $._layout_close_brace
-      )
-    ),
-
-    _local_declaration: $ => choice(
-      $._declaration,
-      $.pattern_declaration,
-      $.fixity_declaration,
-      $.free_declaration
-    ),
-
-    pattern_declaration: $ => seq(
-      $.pattern,
-      alias($.function_rhs, $.pattern_rhs)
-    ),
-
-    free_declaration: $ => seq(repeat1($._variable), 'free'),
-
-    pattern: $ => seq(
-      $.constructor_pattern,
-      optional(seq($._qual_con_op, $.pattern))
-    ),
-
-    constructor_pattern: $ => choice(
-      seq($.general_data_constructor, repeat1($.simple_pattern)),
-      $.negative_pattern,
-      $.simple_pattern
-    ),
-
-    negative_pattern: $ => seq('-', choice($.int, $.float)),
-
-    simple_pattern: $ => choice(
-      $._variable,
-      $.wildcard,
-      $.general_data_constructor,
-      $._literal,
-      $.tuple_pattern,
-      $.list_pattern,
-      $.paren_pattern,
-      $.as_pattern,
-      $.irrefutable_pattern,
-      $.functional_pattern,
-      $.functional_infix_pattern,
-      $.field_pattern
-    ),
-
-    tuple_pattern: $ => parens(sep2(',', $.pattern)),
-
-    list_pattern: $ => brackets(sep1(',', $.pattern)),
-
-    paren_pattern: $ => parens($.pattern),
-
-    as_pattern: $ => seq(
-      $._variable,
-      '@',
-      $.simple_pattern
-    ),
-
-    irrefutable_pattern: $ => seq('~', $.simple_pattern),
-
-    functional_pattern: $ => parens(seq(
-      $._qualified_function,
-      repeat1($.simple_pattern)
-    )),
-
-    functional_infix_pattern: $ => parens(seq(
-      $.constructor_pattern,
-      $._qual_fun_op,
-      $.pattern
-    )),
-
-    field_pattern: $ => seq(
-      $._qualified_data_constructor,
-      braces(sep1(',', $.pattern_field))
-    ),
-
-    pattern_field: $ => seq(
-      $._qualified_label,
-      '=',
-      $.pattern
-    ),
-
-    expression: $ => prec.right(seq(
-      $.infix_expression,
-      optional($.type_annotation)
-    )),
-
-    infix_expression: $ => choice(
-      $.infix_operator_expression,
-      $.prefix_negation_expression,
-      $.no_operator_expression
-    ),
-
-    prefix_negation_expression: $ => seq('-', $.infix_expression),
-
-    infix_operator_expression: $ => prec.right(seq(
-      $.no_operator_expression,
-      $._qual_op,
-      $.infix_expression
-    )),
-
-    no_operator_expression: $ => choice(
-      $.lambda_expression,
-      $.let_expression,
-      $.if_then_else_expression,
-      $.case_expression,
-      $.do_expression,
-      $.function_expression,
-      $.basic_expression
-    ),
-
-    lambda_expression: $ => seq(
-      '\\',
-      repeat1($.simple_pattern),
-      '->',
-      $.expression
-    ),
-
-    let_expression: $ => seq(
-      'let',
-      $._local_declarations,
-      'in',
-      $.expression
-    ),
-
-    if_then_else_expression: $ => seq(
-      'if',
-      $.expression,
-      'then',
-      $.expression,
-      'else',
-      $.expression
-    ),
-
-    case_expression: $ => seq(
-      choice('fcase', 'case'),
-      $.expression,
-      'of',
-      $._alts
-    ),
-
-    do_expression: $ => seq(
-      'do',
-      $._statements
-    ),
-
-    _statements: $ => choice(
-      braces(repeat1(seq($.statement, optional($.terminal)))),
-      seq(
-        $._layout_open_brace,
-        repeat1(seq($.statement, choice($.terminal, $._layout_semicolon))),
-        $._layout_close_brace
-      )
-    ),
-
-    statement: $ => choice(
-      seq($.pattern, '<-', $.expression),
-      seq('let', $._local_declarations),
-      $.expression
-    ),
-
-    _alts: $ => choice(
-      braces(repeat1(seq($.alt, optional($.terminal)))),
-      seq(
-        $._layout_open_brace,
-        repeat1(seq($.alt, choice($.terminal, $._layout_semicolon))),
-        $._layout_close_brace
-      )
-    ),
-
-    alt: $ => choice(
-      seq($.pattern, '->', $.expression, optional($._local_where)),
-      seq($.pattern, $._alt_guards, optional($._local_where))
-    ),
-
-    _alt_guards: $ => repeat1($.alt_guard),
-
-    alt_guard: $ => seq(
-      '|',
-      $.infix_expression,
-      '->',
-      $.expression
-    ),
-
-    function_expression: $ => prec.left(seq(
-      choice($.function_expression, $.basic_expression),
-      choice($.function_expression, $.basic_expression)
-    )),
-
-    basic_expression: $ => choice(
-      $._variable,
-      $.wildcard,
-      $._qualified_function,
-      $.general_data_constructor,
-      $._literal,
-      $.tuple_expression,
-      $.list_expression,
-      $.paren_expression,
-      $.arithmetic_sequence,
-      $.list_comprehension,
-      $.left_section,
-      $.right_section,
-      $.record_update
-    ),
-
-    tuple_expression: $ => parens(sep2(',', $.expression)),
-
-    list_expression: $ => brackets(sep1(',', $.expression)),
-
-    paren_expression: $ => parens($.expression),
-
-    arithmetic_sequence: $ => brackets(seq(
-      $.expression,
-      optional(seq(',', $.expression)),
-      '..',
-      optional($.expression)
-    )),
-
-    list_comprehension: $ => brackets(seq(
-      $.expression,
-      '|',
-      sep1(',', $.statement)
-    )),
-
-    left_section: $ => parens(seq(
-      $.infix_expression,
-      $._qual_op
-    )),
-
-    right_section: $ => parens(seq(
-      $._qual_op,
-      $.infix_expression
-    )),
-
-    record_update: $ => seq(
-      $.basic_expression,
-      $._field_binds
-    ),
-
-    _field_binds: $ => braces(optional(sep1(',', $.field_bind))),
-
-    field_bind: $ => seq(
-      $._qualified_label,
-      '=',
-      $.expression
-    ),
-
-    general_data_constructor: $ => choice(
-      '()',
-      '[]',
-      $.tuple_constructor,
-      $._qualified_data_constructor
-    ),
-  }
+      cypher: ($) => seq($.statement, optional(';')),
+      statement: ($) => $.query,
+      query: $ => choice($.regular_query, $.standalone_call),
+      regular_query: ($) => seq($.single_query, repeat($.union)),
+      union: ($) => seq(word('union'), optional(word('all')), $.single_query),
+      single_query: ($) => choice($.single_part_query, $.multi_part_query),
+      single_part_query: ($) => choice(seq(repeat($.reading_clause), $.return), seq(repeat($.reading_clause), repeat1($.updating_clause), optional($.return))),
+      multi_part_query: ($) => seq(repeat1(seq(repeat($.reading_clause), repeat($.updating_clause), $.with)), $.single_part_query),
+      updating_clause: ($) => choice($.create, $.merge, $.delete, $.set, $.remove),
+      reading_clause: ($) => choice($.match, $.unwind, $.in_query_call),
+      match: ($) => seq(optional(word('optional')), word('match'), $.pattern, optional($.where)),
+      unwind: ($) => seq(word('unwind'), $.expression, word('as'), $.variable),
+      merge: ($) => seq(word('merge'), $.pattern_part, repeat($.merge_action)),
+      merge_action: ($) => seq(word('on'), choice(word('create'), word('match')), $.set),
+      create: ($) => seq(word('create'), $.pattern),
+      set: ($) => seq(word('set'), $.set_item, repeat(seq(',', $.set_item))),
+      set_item: ($) => choice(seq($.property_expression, '=', $.expression), seq($.variable, choice('+=', '='), $.expression), seq($.variable, $.node_labels)),
+      delete: ($) => seq(optional(word('detach')), word('delete'), $.expression, repeat(seq(',', $.expression))),
+      remove: ($) => seq(word('remove'), $.remove_item, repeat(seq(',', $.remove_item))),
+      remove_item: ($) => choice(seq($.variable, $.node_labels), $.property_expression),
+      in_query_call: ($) => seq(word('call'), $.explicit_procedure_invocation, optional(seq(word('yield'), $.yield_items))),
+      standalone_call: ($) => seq(word('call'), choice($.explicit_procedure_invocation, $.implicit_procedure_invocation), optional(seq(word('yield'), $.yield_items))),
+      yield_items: ($) => seq(choice('*', seq($.yield_item, repeat(seq(',', $.yield_item)))), optional($.where)),
+      yield_item: ($) => seq(optional(seq($.procedure_result_field, word('as'))), $.variable),
+      with: ($) => seq(word('with'), $.projection_body, optional($.where)),
+      return: ($) => seq(word('return'), $.projection_body),
+      projection_body: ($) => seq(optional(word('distinct')), $.projection_items, optional($.order), optional($.skip), optional($.limit)),
+      projection_items: ($) => choice(seq('*', repeat(seq(',', $.projection_item))), seq($.projection_item, repeat(seq(',', $.projection_item)))),
+      projection_item: ($) => choice($.expression, seq($.expression, word('as'), $.variable)),
+      order: ($) => seq(word('order'), word('by'), $.sort_item, repeat(seq(',', $.sort_item))),
+      skip: ($) => seq(word('skip'), $.expression),
+      limit: ($) => seq(word('limit'), $.expression),
+      sort_item: ($) => seq($.expression, optional(choice(word('asc'), word('ascending'), word('desc'), word('descending')))),
+      where: ($) => seq(word('where'), $.expression),
+      pattern: ($) => seq($.pattern_part, repeat(seq(',', $.pattern_part))),
+      pattern_part: ($) => choice(seq($.variable, '=', $.anonymous_pattern_part), $.anonymous_pattern_part),
+      anonymous_pattern_part: ($) => $.pattern_element,
+      pattern_element: ($) => choice(seq($.node_pattern, repeat($.pattern_element_chain)), seq('(', $.pattern_element, ')')),
+      /*
+       * Rule that was extracted from common pattern on `note_pattern` and `parenthesized_expression`.
+       * Both of them could be expressed as `(variable)` what caused the tree to be generated in
+       * favour of one of those rules.
+       * In short: I couldn't find a way to fix the problem without this "artificial" rule.
+       */
+      variable_in_parens: ($) => seq('(', $.variable, ')'),
+      // TODO: verify whether the precedence higher than `parenthesized_expression` is correct.
+      node_pattern: ($) => prec(1, choice($.variable_in_parens, seq('(', optional($.variable), optional($.node_labels), optional($.properties), ')'))),
+      pattern_element_chain: ($) => seq($.relationship_pattern, $.node_pattern),
+      relationship_pattern: ($) => seq(optional($.left_arrow_head), $.dash, optional($.relationship_detail), $.dash, optional($.right_arrow_head)),
+      relationship_detail: ($) => seq('[', optional($.variable), optional($.relationship_types), optional($.range_literal), optional($.properties), ']'),
+      // TODO: ensure that the precedence here does not break grammar.
+      properties: ($) => prec(1, choice($.map_literal, $.parameter)),
+      relationship_types: ($) => seq(':', $.rel_type_name, repeat(seq('|', optional(':'), $.rel_type_name))),
+      node_labels: ($) => prec.right(repeat1($.node_label)),
+      node_label: ($) => seq(':', $.label_name),
+      range_literal: ($) => seq('*', optional($.integer_literal), optional(seq('..', optional($.integer_literal)))),
+      label_name: ($) => $.schema_name,
+      rel_type_name: ($) => $.schema_name,
+      expression: ($) => choice($.or_expression, $.xor_expression, $.and_expression, $.not_expression, $.comparison_expression, $.string_list_null_predicate_expression, $.additive_expression, $.multiplicative_expression, $.exponential_expression, $.unary_expression, $.list_operator_expression, $.property_or_labels_expression, $.atom),
+      or_expression: ($) => prec.left(1, seq($.expression, word('or'), $.expression)),
+      xor_expression: ($) => prec.left(2, seq($.expression, word('xor'), $.expression)),
+      and_expression: ($) => prec.left(3, seq($.expression, word('and'), $.expression)),
+      not_expression: ($) => prec(4, seq(word('not'), $.expression)),
+      comparison_expression: ($) => prec.left(5, seq($.expression, seq(choice('=', '<>', '<', '>', '<=', '>='), $.expression))),
+      string_list_null_predicate_expression: ($) => prec(6, seq($.expression, choice($.list_predicate_expression, $.string_predicate_expression, $.null_predicate_expression))),
+      list_predicate_expression: ($) => prec.left(6, seq(word('in'), $.expression)),
+      string_predicate_expression: ($) => prec.left(6, seq(choice(seq(word('starts'), word('with')), seq(word('ends'), word('with')), seq(word('contains'))), $.expression)),
+      null_predicate_expression: ($) => prec(6, seq(word('is'), optional(word('not')), word('null'))),
+      additive_expression: ($) => prec.left(7, seq($.expression, choice('-', '+'), $.expression)),
+      multiplicative_expression: ($) => prec.left(8, seq($.expression, choice('*', '/', '%'), $.expression)),
+      exponential_expression: ($) => prec.left(9, seq($.expression, '^', $.expression)),
+      unary_expression: ($) => prec(10, seq(choice('+', '-'), $.expression)),
+      list_operator_expression: ($) => prec(11, seq($.expression, choice(seq('[', $.expression, ']'), seq('[', optional($.expression), '..', optional($.expression), ']')))),
+      property_or_labels_expression: ($) => prec.right(11, seq($.expression, choice(seq(repeat1($.property_lookup), optional($.node_labels)), seq(repeat($.property_lookup), $.node_labels)))),
+      atom: ($) => choice($.literal, $.parameter, $.case_expression, seq(word('count'), /\(\s*\*\s*\)/), $.list_comprehension, $.pattern_comprehension, $.quantifier, $.pattern_predicate, $.parenthesized_expression, $.function_invocation, $.existential_subquery, prec.left($.variable)),
+      literal: ($) => choice($.number_literal, $.string_literal, $.boolean_literal, $.null_literal, $.map_literal, $.list_literal),
+      null_literal: () => word('null'),
+      boolean_literal: () => choice(word('true'), word('false')),
+      list_literal: ($) => seq('[', optional(seq($.expression, repeat(seq(',', $.expression)))), ']'),
+      parenthesized_expression: ($) => choice($.variable_in_parens, seq('(', $.expression, ')')),
+      relationships_pattern: ($) => seq($.node_pattern, prec.right(repeat1($.pattern_element_chain))),
+      pattern_predicate: ($) => $.relationships_pattern,
+      filter_expression: ($) => seq($.id_in_coll, optional($.where)),
+      id_in_coll: ($) => prec(1, seq($.variable, word('in'), $.expression)),
+      function_invocation: ($) => seq($.function_name, '(', optional(word('distinct')), optional(seq($.expression, repeat(seq(',', $.expression)))), ')'),
+      function_name: ($) => seq(optional($.namespace), $.symbolic_name),
+      existential_subquery: ($) => seq(word('exists'), '{', choice($.regular_query, seq($.pattern, optional($.where))), '}'),
+      explicit_procedure_invocation: ($) => seq($.procedure_name, '(', optional(seq($.expression, repeat(seq(',', $.expression)))), ')'),
+      implicit_procedure_invocation: ($) => $.procedure_name,
+      procedure_result_field: ($) => $.symbolic_name,
+      procedure_name: ($) => seq(optional($.namespace), $.symbolic_name),
+      namespace: ($) => repeat1(seq($.variable, '.')),
+      list_comprehension: ($) => seq('[', $.filter_expression, optional(seq('|', $.expression)), ']'),
+      pattern_comprehension: ($) => prec(11, seq('[', optional(seq($.variable, '=')), $.relationships_pattern, optional(seq(word('where'), $.expression)), '|', $.expression, ']')),
+      quantifier: ($) => prec(12, choice(seq(word('all'), '(', $.filter_expression, ')'), seq(word('any'), '(', $.filter_expression, ')'), seq(word('none'), '(', $.filter_expression, ')'), seq(word('single'), '(', $.filter_expression, ')'))),
+      property_lookup: ($) => seq('.', $.property_key_name),
+      case_expression: ($) => seq(choice(seq(word('case'), repeat($.case_alternatives)), seq(word('case'), $.expression, repeat($.case_alternatives))), optional(seq(word('else'), $.expression)), word('end')),
+      case_alternatives: ($) => seq(word('when'), $.expression, word('then'), $.expression),
+      variable: ($) => $.symbolic_name,
+      string_literal: ($) => choice(seq(`'`, repeat(choice(/[^'\\]+/, $.escaped_char)), `'`), seq(`"`, repeat(choice(/[^"\\]+/, $.escaped_char)), `"`)),
+      escaped_char: () => token(seq('\\', choice('\\', `"`, `'`, /[^uU]/, /[u][a-fA-F0-9]{4}/, /[U][a-fA-F0-9]{8}/))),
+      number_literal: ($) => choice($.double_literal, $.integer_literal),
+      map_literal: ($) => seq('{', optional(seq($.property_key_name, ':', $.expression, repeat(seq(',', $.property_key_name, ':', $.expression)))), '}'),
+      parameter: ($) => seq('$', choice($.symbolic_name, $.decimal_integer)),
+      property_expression: ($) => seq($.atom, repeat($.property_lookup)),
+      property_key_name: ($) => $.schema_name,
+      integer_literal: ($) => choice($.hex_integer, $.octal_integer, $.decimal_integer),
+      hex_integer: () => /0x[0-9a-f]+/i,
+      decimal_integer: () => choice('0', /[1-9][0-9]*/),
+      octal_integer: () => /0o[0-7]+/,
+      double_literal: ($) => choice($.exponent_decimal_real, $.regular_decimal_real),
+      exponent_decimal_real: () => token(seq(choice(/[0-9]+/, seq(/[0-9]+/, '.', /[0-9]+/), seq('.', /[0-9]+/)), word('e'), optional('-'), /[0-9]+/)),
+      regular_decimal_real: () => /[0-9]*\.[0-9]+/,
+      schema_name: ($) => choice($.symbolic_name, $.reserved_word),
+      reserved_word: () => choice(word('all'), word('asc'), word('ascending'), word('by'), word('create'), word('delete'), word('desc'), word('descending'), word('detach'), word('exists'), word('limit'), word('match'), word('merge'), word('on'), word('optional'), word('order'), word('remove'), word('return'), word('set'), word('skip'), word('where'), word('with'), word('union'), word('unwind'), word('and'), word('as'), word('contains'), word('distinct'), word('ends'), word('in'), word('is'), word('not'), word('or'), word('starts'), word('xor'), word('false'), word('true'), word('null'), word('constraint'), word('unique'), word('case'), word('when'), word('then'), word('else'), word('end'), word('mandatory'), word('scalar'), word('of'), word('add'), word('drop')),
+      symbolic_name: ($) => prec.left(choice($.unescaped_symbolic_name, $.escaped_symbolic_name, word('count'), word('filter'), word('extract'), word('any'), word('none'), word('single'))),
+      unescaped_symbolic_name: ($) => (/(\p{ID_Start}|\p{Pc})(\p{ID_Continue}|\p{Sc})*/u),
+      escaped_symbolic_name: () => repeat1(/`[^`]*`/),
+      comment: ($) => choice(seq('/*', repeat(choice(/[^\*]/, /\*[^\/]/)), '*/'), seq('//', /.*/, '\n')),
+      left_arrow_head: () => choice('<', '\u{27e8}', '\u{3008}', '\u{fe64}', '\u{ff1c}'),
+      right_arrow_head: () => choice('>', '\u{27e9}', '\u{3009}', '\u{fe65}', '\u{ff1e}'),
+      dash: () => choice('-', '\u{00ad}', '\u{2010}', '\u{2011}', '\u{2012}', '\u{2013}', '\u{2014}', '\u{2015}', '\u{2212}', '\u{fe58}', '\u{fe63}', '\u{ff0d}'),
+      _whitespace_char: ($) => token(choice('\u{0009}', '\u{000a}', '\u{000b}', '\u{000c}', '\u{000d}', '\u{001c}', '\u{001d}', '\u{001e}', '\u{001f}', '\u{0020}', '\u{1680}', '\u{180e}', '\u{2000}', '\u{2001}', '\u{2002}', '\u{2003}', '\u{2004}', '\u{2005}', '\u{2006}', '\u{2008}', '\u{2009}', '\u{200a}', '\u{2028}', '\u{2029}', '\u{205f}', '\u{3000}', '\u{00a0}', '\u{2007}', '\u{202f}')),
+  },
 });
-
-function sep1(sep, rule) {
-  return seq(rule, repeat(seq(sep, rule)));
+// TODO: Add tests and use this function.
+function comma_separated(rule) {
+  return seq(rule, repeat(seq(',', rule)));
 }
-
-function sep2(sep, rule) {
-  return seq(rule, sep, sep1(sep, rule));
-}
-
-function parens(rule) {
-  return seq('(', rule, ')');
-}
-
-function brackets(rule) {
-  return seq('[', rule, ']');
-}
-
-function braces(rule) {
-  return seq('{', rule, '}');
-}
-
-function backticks(rule) {
-  return seq('`', rule, '`');
+function word(keyword) {
+  return alias(token(seq(...keyword
+      .split('')
+      .map((char) => choice(char.toLowerCase(), char.toUpperCase())))), keyword);
 }
